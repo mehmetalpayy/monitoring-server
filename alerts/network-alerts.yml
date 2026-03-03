@@ -1,0 +1,17 @@
+groups:
+  - name: network-alerts
+    rules:
+      - alert: NetworkErrorsHigh
+        expr: |
+          (
+            rate(node_network_receive_errs_total{device!~"^lo$|^docker.*|^veth.*|^cni.*|^flannel.*"}[5m]) +
+            rate(node_network_transmit_errs_total{device!~"^lo$|^docker.*|^veth.*|^cni.*|^flannel.*"}[5m])
+          )
+          * on (instance) group_left (nodename) node_uname_info
+          > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network errors on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Network error rate > 1/sec on {{ $labels.nodename }} (device {{ $labels.device }})."

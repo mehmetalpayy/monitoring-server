@@ -1,0 +1,44 @@
+groups:
+  - name: disk-alerts
+    rules:
+      - alert: DiskInodeLow
+        expr: |
+          (
+            node_filesystem_files_free{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"^/(run|boot|snap|var/lib/docker/.+|var/lib/containerd/.+)"}
+            / node_filesystem_files{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"^/(run|boot|snap|var/lib/docker/.+|var/lib/containerd/.+)"}
+          ) * 100
+          * on (instance) group_left (nodename) node_uname_info
+          < 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low inodes on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Free inodes {{ printf \"%.2f\" $value }}% (< 10%) on {{ $labels.nodename }} ({{ $labels.mountpoint }})."
+
+      - alert: DiskInodeCritical
+        expr: |
+          (
+            node_filesystem_files_free{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"^/(run|boot|snap|var/lib/docker/.+|var/lib/containerd/.+)"}
+            / node_filesystem_files{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"^/(run|boot|snap|var/lib/docker/.+|var/lib/containerd/.+)"}
+          ) * 100
+          * on (instance) group_left (nodename) node_uname_info
+          < 5
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical inode pressure on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Free inodes {{ printf \"%.2f\" $value }}% (< 5%) on {{ $labels.nodename }} ({{ $labels.mountpoint }})."
+
+      - alert: DiskIOSaturationHigh
+        expr: |
+          rate(node_disk_io_time_seconds_total{device!~"^loop|^ram"}[5m])
+          * on (instance) group_left (nodename) node_uname_info
+          > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk IO saturation on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Disk IO time > 90% for 10m on {{ $labels.nodename }} (device {{ $labels.device }})."

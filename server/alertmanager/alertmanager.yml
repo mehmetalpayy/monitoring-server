@@ -1,0 +1,15 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: teams
+  group_by: ["alertname", "severity", "instance"]
+  group_wait: 10s
+  group_interval: 3m
+  repeat_interval: 2h
+
+receivers:
+  - name: teams
+    webhook_configs:
+      - url: "http://teams-proxy:5000/webhook"
+        send_resolved: true

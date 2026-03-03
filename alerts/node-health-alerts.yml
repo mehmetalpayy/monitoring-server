@@ -1,0 +1,78 @@
+groups:
+  - name: node-health-alerts
+    rules:
+      - alert: ExporterDown
+        expr: |
+          (
+            absent_over_time(node_uname_info{instance="dev"}[2m])
+            or
+            absent_over_time(container_last_seen{instance="dev"}[2m])
+          )
+          or
+          (
+            absent_over_time(node_uname_info{instance="test"}[2m])
+            or
+            absent_over_time(container_last_seen{instance="test"}[2m])
+          )
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Exporter down on {{ $labels.instance }}"
+          description: "Prometheus cannot scrape {{ $labels.job }} on {{ $labels.instance }} for 5m."
+
+      - alert: MemoryPressureHigh
+        expr: |
+          (
+            (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+          )
+          * on (instance) group_left (nodename) node_uname_info
+          < 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory pressure on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "MemAvailable is {{ printf \"%.2f\" $value }}% (< 10%) on {{ $labels.nodename }} ({{ $labels.instance }})."
+
+      - alert: MemoryPressureCritical
+        expr: |
+          (
+            (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+          )
+          * on (instance) group_left (nodename) node_uname_info
+          < 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory pressure on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "MemAvailable is {{ printf \"%.2f\" $value }}% (< 5%) on {{ $labels.nodename }} ({{ $labels.instance }})."
+
+      - alert: SwapInUseHigh
+        expr: |
+          (
+            (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100
+          )
+          * on (instance) group_left (nodename) node_uname_info
+          > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High swap usage on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Swap usage is {{ printf \"%.2f\" $value }}% (> 50%) on {{ $labels.nodename }} ({{ $labels.instance }})."
+
+      - alert: SwapInUseCritical
+        expr: |
+          (
+            (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100
+          )
+          * on (instance) group_left (nodename) node_uname_info
+          > 80
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical swap usage on {{ $labels.nodename }} ({{ $labels.instance }})"
+          description: "Swap usage is {{ printf \"%.2f\" $value }}% (> 80%) on {{ $labels.nodename }} ({{ $labels.instance }})."

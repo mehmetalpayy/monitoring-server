@@ -1,0 +1,359 @@
+rule_files:
+  - ../node-health-alerts.yml
+  - ../container-alerts.yml
+  - ../disk-alerts.yml
+  - ../network-alerts.yml
+  - ../vm-resource-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: exporter_down_test
+    interval: 1m
+    input_series:
+      # No series for instance="test" to trigger absent_over_time.
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x12'
+      - series: 'container_last_seen{instance="dev", name="api"}'
+        values: '0x12'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ExporterDown
+        exp_alerts:
+          - exp_labels:
+              alertname: ExporterDown
+              instance: test
+              severity: critical
+            exp_annotations:
+              summary: "Exporter down on test"
+              description: "Prometheus cannot scrape  on test for 5m."
+
+  - name: memory_pressure_warning
+    interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="dev"}'
+        values: '80x10'
+      - series: 'node_memory_MemTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MemoryPressureHigh
+        exp_alerts:
+          - exp_labels:
+              alertname: MemoryPressureHigh
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "Memory pressure on dev (dev)"
+              description: "MemAvailable is 8.00% (< 10%) on dev (dev)."
+
+  - name: memory_pressure_critical
+    interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="dev"}'
+        values: '40x10'
+      - series: 'node_memory_MemTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: MemoryPressureCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: MemoryPressureCritical
+              instance: dev
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical memory pressure on dev (dev)"
+              description: "MemAvailable is 4.00% (< 5%) on dev (dev)."
+
+  - name: swap_warning
+    interval: 1m
+    input_series:
+      - series: 'node_memory_SwapFree_bytes{instance="dev"}'
+        values: '400x10'
+      - series: 'node_memory_SwapTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: SwapInUseHigh
+        exp_alerts:
+          - exp_labels:
+              alertname: SwapInUseHigh
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "High swap usage on dev (dev)"
+              description: "Swap usage is 60.00% (> 50%) on dev (dev)."
+
+  - name: swap_critical
+    interval: 1m
+    input_series:
+      - series: 'node_memory_SwapFree_bytes{instance="dev"}'
+        values: '100x10'
+      - series: 'node_memory_SwapTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: SwapInUseCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: SwapInUseCritical
+              instance: dev
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical swap usage on dev (dev)"
+              description: "Swap usage is 90.00% (> 80%) on dev (dev)."
+
+  - name: container_down
+    interval: 1m
+    input_series:
+      - series: 'container_last_seen{instance="dev", name="api"}'
+        values: '0x13'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: ContainerDown
+        exp_alerts:
+          - exp_labels:
+              alertname: ContainerDown
+              instance: dev
+              name: api
+              severity: warning
+            exp_annotations:
+              summary: "Container down on dev"
+              description: "Container api not seen for > 5m on dev."
+
+  - name: disk_inode_low
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_files_free{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '80x10'
+      - series: 'node_filesystem_files{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: DiskInodeLow
+        exp_alerts:
+          - exp_labels:
+              alertname: DiskInodeLow
+              fstype: ext4
+              instance: dev
+              mountpoint: /
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "Low inodes on dev (dev)"
+              description: "Free inodes 8.00% (< 10%) on dev (/)."
+
+  - name: disk_inode_critical
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_files_free{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '40x10'
+      - series: 'node_filesystem_files{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: DiskInodeCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: DiskInodeCritical
+              fstype: ext4
+              instance: dev
+              mountpoint: /
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical inode pressure on dev (dev)"
+              description: "Free inodes 4.00% (< 5%) on dev (/)."
+
+  - name: disk_io_saturation
+    interval: 1m
+    input_series:
+      - series: 'node_disk_io_time_seconds_total{instance="dev", device="sda"}'
+        values: '0 60 120 180 240 300 360 420 480 540 600 660 720 780 840 900 960'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x17'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: DiskIOSaturationHigh
+        exp_alerts:
+          - exp_labels:
+              alertname: DiskIOSaturationHigh
+              device: sda
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "High disk IO saturation on dev (dev)"
+              description: "Disk IO time > 90% for 10m on dev (device sda)."
+
+  - name: network_errors_high
+    interval: 1m
+    input_series:
+      - series: 'node_network_receive_errs_total{instance="dev", device="eth0"}'
+        values: '0 120 240 360 480 600 720 840 960 1080 1200'
+      - series: 'node_network_transmit_errs_total{instance="dev", device="eth0"}'
+        values: '0 120 240 360 480 600 720 840 960 1080 1200'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x11'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NetworkErrorsHigh
+        exp_alerts:
+          - exp_labels:
+              alertname: NetworkErrorsHigh
+              device: eth0
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "Network errors on dev (dev)"
+              description: "Network error rate > 1/sec on dev (device eth0)."
+
+  - name: vm_high_cpu
+    interval: 1m
+    input_series:
+      - series: 'node_cpu_seconds_total{instance="dev", cpu="0", mode="idle"}'
+        values: '0 6 12 18 24 30 36'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: VMHighCPU
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighCPU
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "High CPU on dev (dev)"
+              description: "CPU usage is 90.00% (> 70%) on dev (dev)"
+
+  - name: vm_high_cpu_critical
+    interval: 1m
+    input_series:
+      - series: 'node_cpu_seconds_total{instance="dev", cpu="0", mode="idle"}'
+        values: '0 3 6 9 12 15 18'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: VMHighCPUCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighCPUCritical
+              instance: dev
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical CPU on dev (dev)"
+              description: "CPU usage is 95.00% (> 90%) on dev (dev)"
+
+  - name: vm_high_memory
+    interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="dev"}'
+        values: '200x10'
+      - series: 'node_memory_MemTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: VMHighMemory
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighMemory
+              instance: dev
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "High memory usage on dev (dev)"
+              description: "Memory usage is 80.00% (> 70%) on dev (dev)"
+
+  - name: vm_high_memory_critical
+    interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="dev"}'
+        values: '50x10'
+      - series: 'node_memory_MemTotal_bytes{instance="dev"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: VMHighMemoryCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighMemoryCritical
+              instance: dev
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical memory usage on dev (dev)"
+              description: "Memory usage is 95.00% (> 90%) on dev (dev)"
+
+  - name: vm_high_disk
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '200x10'
+      - series: 'node_filesystem_size_bytes{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: VMHighDisk
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighDisk
+              fstype: ext4
+              instance: dev
+              mountpoint: /
+              nodename: dev
+              severity: warning
+            exp_annotations:
+              summary: "High disk usage on dev (dev)"
+              description: "Disk usage is 80.00% (> 70%) on dev (dev)"
+
+  - name: vm_high_disk_critical
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '50x10'
+      - series: 'node_filesystem_size_bytes{instance="dev", fstype="ext4", mountpoint="/"}'
+        values: '1000x10'
+      - series: 'node_uname_info{instance="dev", nodename="dev"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: VMHighDiskCritical
+        exp_alerts:
+          - exp_labels:
+              alertname: VMHighDiskCritical
+              fstype: ext4
+              instance: dev
+              mountpoint: /
+              nodename: dev
+              severity: critical
+            exp_annotations:
+              summary: "Critical disk usage on dev (dev)"
+              description: "Disk usage is 95.00% (> 90%) on dev (dev)"
