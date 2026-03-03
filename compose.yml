@@ -1,0 +1,88 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./server/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+    ports:
+      - 9090:9090
+    depends_on:
+      - alertmanager
+
+  loki:
+    image: grafana/loki:3.6.5
+    container_name: loki
+    restart: unless-stopped
+    volumes:
+      - ./server/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+    ports:
+      - 3100:3100
+
+  grafana:
+    image: grafana/grafana:12.3.2
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - ./server/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./server/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    depends_on:
+      - teams-proxy
+
+  teams-proxy:
+    build: ./server/teams-proxy
+    container_name: teams-proxy
+    restart: unless-stopped
+    environment:
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:?TEAMS_WEBHOOK_URL is required and cannot be empty}
+    ports:
+      - "5000:5000"
+
+  phoenix:
+    image: arizephoenix/phoenix:12.29.0
+    container_name: phoenix
+    restart: unless-stopped
+    environment:
+      - PHOENIX_PORT=6006
+      - PHOENIX_WORKING_DIR=/mnt/data
+    ports:
+      - 6006:6006
+      - 4317:4317
+    volumes:
+      - phoenix_data:/mnt/data
+
+volumes:
+  prometheus_data:
+    driver: local
+  loki_data:
+    driver: local
+  grafana_data:
+    driver: local
+  phoenix_data:
+    driver: local
