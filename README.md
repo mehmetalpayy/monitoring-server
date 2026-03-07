@@ -83,7 +83,7 @@ Phoenix is useful as a LangSmith-like observability layer, including non-LangCha
 ### 1. Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/mehmetalpayy/monitoring-server.git
 cd monitoring-server
 ```
 
